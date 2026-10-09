@@ -1,5 +1,9 @@
 RestrictEvents Changelog
 ========================
+#### v1.1.7
+- Fixed `f16c` sysctl argument being truncated to 32 bits
+- Internal cleanups
+
 #### v1.1.6
 - Added constants for macOS 26 support
 
