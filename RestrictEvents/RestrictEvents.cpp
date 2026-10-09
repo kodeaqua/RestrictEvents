@@ -77,7 +77,7 @@ static pmCallBacks_t pmCallbacks;
 static uint8_t findDiskArbitrationPatch[] = { 0x83, 0xF8, 0x02 };
 static uint8_t replDiskArbitrationPatch[] = { 0x83, 0xF8, 0x0F };
 
-const char *procBlacklist[10] = {};
+static const char *procBlacklist[10] = {};
 
 struct RestrictEventsPolicy {
 
@@ -90,7 +90,6 @@ struct RestrictEventsPolicy {
 		int err = vn_getpath(vp, pathbuf, &len);
 
 		if (err == 0) {
-			// Uncomment for more verbose output.
 			DBGLOG_COND(verboseProcessLogging, "rev", "got request %s", pathbuf);
 
 			for (auto &proc : procBlacklist) {
@@ -390,62 +389,33 @@ struct RestrictEventsPolicy {
 	static void calculatePatchedBrandString() {
 		auto cc = getCoreCount();
 
+		// Catalina and newer prefix the generic i5 brand string with the core count.
+		const bool hasCorePrefix = getKernelVersion() >= KernelVersion::Catalina;
+		const char *name;
+
 		switch (cc) {
-			case 1:
-				cpuFindPatch = "\0" "Intel Core i5";
-				cpuFindSize = sizeof("\0" "Intel Core i5");
-				break;
-			case 2:
-				cpuFindPatch = getKernelVersion() >= KernelVersion::Catalina ? "\0" "Dual-Core Intel Core i5" : "\0" "Intel Core i5";
-				cpuFindSize = getKernelVersion() >= KernelVersion::Catalina ? sizeof("\0" "Dual-Core Intel Core i5") : sizeof("\0" "Intel Core i5");
-				break;
-			case 4:
-				cpuFindPatch = getKernelVersion() >= KernelVersion::Catalina ? "\0" "Quad-Core Intel Core i5" : "\0" "Intel Core i5";
-				cpuFindSize = getKernelVersion() >= KernelVersion::Catalina ? sizeof("\0" "Quad-Core Intel Core i5") : sizeof("\0" "Intel Core i5");
-				break;
-			case 6:
-				cpuFindPatch = getKernelVersion() >= KernelVersion::Catalina ? "\0" "6-Core Intel Core i5" : "\0" "Intel Core i5";
-				cpuFindSize = getKernelVersion() >= KernelVersion::Catalina ? sizeof("\0" "6-Core Intel Core i5") : sizeof("\0" "Intel Core i5");
-				break;
-			case 8:
-				cpuFindPatch = "\0" "8-Core Intel Xeon W";
-				cpuFindSize = sizeof("\0" "8-Core Intel Xeon W");
-				break;
-			case 10:
-				cpuFindPatch = "\0" "10-Core Intel Xeon W";
-				cpuFindSize = sizeof("\0" "10-Core Intel Xeon W");
-				break;
-			case 12:
-				cpuFindPatch = "\0" "12-Core Intel Xeon W";
-				cpuFindSize = sizeof("\0" "12-Core Intel Xeon W");
-				break;
-			case 14:
-				cpuFindPatch = "\0" "14-Core Intel Xeon W";
-				cpuFindSize = sizeof("\0" "14-Core Intel Xeon W");
-				break;
-			case 16:
-				cpuFindPatch = "\0" "16-Core Intel Xeon W";
-				cpuFindSize = sizeof("\0" "16-Core Intel Xeon W");
-				break;
-			case 18:
-				cpuFindPatch = "\0" "18-Core Intel Xeon W";
-				cpuFindSize = sizeof("\0" "18-Core Intel Xeon W");
-				break;
-			case 24:
-				cpuFindPatch = "\0" "24-Core Intel Xeon W";
-				cpuFindSize = sizeof("\0" "24-Core Intel Xeon W");
-				break;
-			case 28:
-				cpuFindPatch = "\0" "28-Core Intel Xeon W";
-				cpuFindSize = sizeof("\0" "28-Core Intel Xeon W");
-				break;
+			case 1:  name = "\0" "Intel Core i5"; break;
+			case 2:  name = hasCorePrefix ? "\0" "Dual-Core Intel Core i5" : "\0" "Intel Core i5"; break;
+			case 4:  name = hasCorePrefix ? "\0" "Quad-Core Intel Core i5" : "\0" "Intel Core i5"; break;
+			case 6:  name = hasCorePrefix ? "\0" "6-Core Intel Core i5" : "\0" "Intel Core i5"; break;
+			case 8:  name = "\0" "8-Core Intel Xeon W"; break;
+			case 10: name = "\0" "10-Core Intel Xeon W"; break;
+			case 12: name = "\0" "12-Core Intel Xeon W"; break;
+			case 14: name = "\0" "14-Core Intel Xeon W"; break;
+			case 16: name = "\0" "16-Core Intel Xeon W"; break;
+			case 18: name = "\0" "18-Core Intel Xeon W"; break;
+			case 24: name = "\0" "24-Core Intel Xeon W"; break;
+			case 28: name = "\0" "28-Core Intel Xeon W"; break;
 			default:
-				cpuFindPatch = "\0" "28-Core Intel Xeon W";
-				cpuFindSize = sizeof("\0" "28-Core Intel Xeon W");
+				name = "\0" "28-Core Intel Xeon W";
 				replUnlockCoreCount[16] = cc;
 				needsUnlockCoreCount = true;
 				break;
 		}
+
+		// The patterns embed a leading NUL, so the size must be derived from the exact string.
+		cpuFindPatch = name;
+		cpuFindSize = strlen(name + 1) + 2;
 
 		DBGLOG("rev", "chosen %s patch for %u core CPU", cpuFindPatch + 1, cc);
 	}
@@ -513,7 +483,7 @@ PluginConfiguration ADDPR(config) {
 		revsbvmmIsSet = enableSbvmmPatching;
 
 		if ((lilu.getRunMode() & LiluAPI::RunningNormal) != 0 || (lilu.getRunMode() & LiluAPI::AllowInstallerRecovery) != 0) {
-			if (enableMemoryUiPatching | enablePciUiPatching) {
+			if (enableMemoryUiPatching || enablePciUiPatching) {
 				// Rename existing values to invalid ones to avoid matching.
 				if (strcmp(di.modelIdentifier, "MacPro7,1") == 0) {
 					// on 13.0 MacPro7,1 string literal is inlined, but "MacPro7," will do the matching.
