@@ -7,6 +7,8 @@ RestrictEvents
 
 - `/System/Library/CoreServices/ExpansionSlotNotification`
 - `/System/Library/CoreServices/MemorySlotNotification`
+- `/usr/libexec/displaypolicyd` (opt-in with `revblock=gmux`)
+- `mediaanalysisd` (opt-in with `revblock=media`)
 
 The list of patches currently includes:
 
@@ -33,7 +35,7 @@ _Note_: Apple CPU identifier must be `0x0F01` for 8 core CPUs or higher and `0x0
   - `none` - disable all patching
   - `auto` - same as `memtab,pci,cpuname`, without `memtab` and `pci` patches being applied on real Macs
 - `revcpu=value` to enable (`1`, non-Intel default)/disable (`0`, Intel default) CPU brand string patching.
-- `revcpuname=value` custom CPU brand string (max 48 characters, 20 or less recommended, taken from CPUID otherwise)
+- `revcpuname=value` custom CPU brand string (max 47 characters, 20 or less recommended, taken from CPUID otherwise)
 - `revblock=value` to block processes as comma separated options. Default value is `auto`.
   - `pci` - prevent PCI and RAM configuration notifications on MacPro7,1 platforms
   - `gmux` - block displaypolicyd on Big Sur+ (for genuine MacBookPro9,1/10,1)
