@@ -7,6 +7,13 @@ on:
   release:
     types: [published]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'release' }}
+
 env:
   PROJECT_TYPE: KEXT
 
@@ -14,6 +21,8 @@ jobs:
   build:
     name: Build
     runs-on: macos-latest
+    permissions:
+      contents: write  # required to upload release assets
     env:
       JOB_TYPE: BUILD
     steps:
